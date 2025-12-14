@@ -1,0 +1,20 @@
+{
+  "name": "calculator",
+  "version": "1.0.0",
+  "description": "Браузерный калькулятор",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@vitest/ui": "^4.0.15",
+    "jsdom": "^23.0.0",
+    "vitest": "^4.0.15"
+  }
+}

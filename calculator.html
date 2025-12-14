@@ -137,128 +137,236 @@
     </div>
 
     <script>
-        let display = document.getElementById('display');
-        let currentInput = '0';
-        let shouldResetDisplay = false;
+        /**
+         * Класс Calculator для выполнения математических операций
+         */
+        class Calculator {
+            constructor(displayElement = null) {
+                this.displayElement = displayElement;
+                this.currentInput = '0';
+                this.shouldResetDisplay = false;
+            }
 
-        function updateDisplay() {
-            display.textContent = currentInput;
-        }
+            /**
+             * Обновляет отображение калькулятора
+             */
+            updateDisplay() {
+                if (this.displayElement) {
+                    // Заменяем * на × для отображения, но оставляем * в currentInput для вычислений
+                    const displayText = this.currentInput.replace(/\*/g, '×');
+                    this.displayElement.textContent = displayText;
+                }
+            }
 
-        function appendNumber(number) {
-            if (shouldResetDisplay) {
-                currentInput = '0';
-                shouldResetDisplay = false;
+            /**
+             * Получает текущее значение
+             * @returns {string} Текущее значение калькулятора
+             */
+            getCurrentInput() {
+                return this.currentInput;
             }
-            
-            if (currentInput === '0') {
-                currentInput = number;
-            } else {
-                currentInput += number;
-            }
-            updateDisplay();
-        }
 
-        function appendDecimal() {
-            if (shouldResetDisplay) {
-                currentInput = '0';
-                shouldResetDisplay = false;
-            }
-            
-            if (!currentInput.includes('.')) {
-                currentInput += '.';
-                updateDisplay();
-            }
-        }
-
-        function appendOperator(operator) {
-            if (shouldResetDisplay) {
-                shouldResetDisplay = false;
-            }
-            
-            const lastChar = currentInput[currentInput.length - 1];
-            if (['+', '-', '*', '/'].includes(lastChar)) {
-                currentInput = currentInput.slice(0, -1) + operator;
-            } else {
-                currentInput += operator;
-            }
-            updateDisplay();
-        }
-
-        function calculate() {
-            try {
-                // Заменяем × на * для вычисления
-                let expression = currentInput.replace(/×/g, '*');
+            /**
+             * Добавляет число к текущему вводу
+             * @param {string} number - Цифра для добавления
+             */
+            appendNumber(number) {
+                if (this.shouldResetDisplay) {
+                    this.currentInput = '0';
+                    this.shouldResetDisplay = false;
+                }
                 
-                // Проверяем на деление на ноль
-                if (expression.includes('/0') && !expression.includes('/0.')) {
-                    currentInput = 'Ошибка';
-                    updateDisplay();
-                    shouldResetDisplay = true;
+                // Если текущее значение - это результат вычисления (только число)
+                // или начинается с "0" (но не "0.")
+                if (this.currentInput === '0') {
+                    this.currentInput = number;
+                } else {
+                    // Проверяем, заканчивается ли строка оператором
+                    const lastChar = this.currentInput[this.currentInput.length - 1];
+                    if (['+', '-', '*', '/', '×'].includes(lastChar)) {
+                        // После оператора начинаем новое число
+                        this.currentInput += number;
+                    } else {
+                        // Продолжаем текущее число
+                        this.currentInput += number;
+                    }
+                }
+                this.updateDisplay();
+            }
+
+            /**
+             * Добавляет десятичную точку
+             */
+            appendDecimal() {
+                if (this.shouldResetDisplay) {
+                    this.currentInput = '0';
+                    this.shouldResetDisplay = false;
+                }
+                
+                // Находим последнее число в выражении (после последнего оператора)
+                const lastOperatorIndex = Math.max(
+                    this.currentInput.lastIndexOf('+'),
+                    this.currentInput.lastIndexOf('-'),
+                    this.currentInput.lastIndexOf('*'),
+                    this.currentInput.lastIndexOf('/'),
+                    this.currentInput.lastIndexOf('×')
+                );
+                
+                // Получаем последнее число (часть после последнего оператора или всё выражение)
+                const lastNumber = lastOperatorIndex >= 0 
+                    ? this.currentInput.substring(lastOperatorIndex + 1)
+                    : this.currentInput;
+                
+                // Проверяем, есть ли точка только в последнем числе
+                if (!lastNumber.includes('.')) {
+                    this.currentInput += '.';
+                    this.updateDisplay();
+                }
+            }
+
+            /**
+             * Добавляет оператор к текущему вводу
+             * @param {string} operator - Оператор (+, -, *, /)
+             */
+            appendOperator(operator) {
+                if (this.shouldResetDisplay) {
+                    this.shouldResetDisplay = false;
+                }
+                
+                const lastChar = this.currentInput[this.currentInput.length - 1];
+                if (['+', '-', '*', '/'].includes(lastChar)) {
+                    this.currentInput = this.currentInput.slice(0, -1) + operator;
+                } else {
+                    this.currentInput += operator;
+                }
+                this.updateDisplay();
+            }
+
+            /**
+             * Выполняет вычисление текущего выражения
+             * @returns {string} Результат вычисления или 'Ошибка'
+             */
+            calculate() {
+                try {
+                    // Заменяем × на * для вычисления
+                    let expression = this.currentInput.replace(/×/g, '*');
+                    
+                    // Проверяем на деление на ноль
+                    if (expression.includes('/0') && !expression.includes('/0.')) {
+                        this.currentInput = 'Ошибка';
+                        this.updateDisplay();
+                        this.shouldResetDisplay = true;
+                        return 'Ошибка';
+                    }
+                    
+                    const result = Function('"use strict"; return (' + expression + ')')();
+                    
+                    if (isNaN(result) || !isFinite(result)) {
+                        this.currentInput = 'Ошибка';
+                    } else {
+                        // Форматируем результат: максимум 5 знаков после десятичной точки
+                        if (Number.isInteger(result)) {
+                            // Целые числа отображаем без точки
+                            this.currentInput = result.toString();
+                        } else {
+                            // Для десятичных чисел используем toFixed(5) и убираем лишние нули в конце
+                            const fixedResult = result.toFixed(5);
+                            // Убираем лишние нули после точки
+                            this.currentInput = parseFloat(fixedResult).toString();
+                        }
+                    }
+                    
+                    this.updateDisplay();
+                    this.shouldResetDisplay = true;
+                    return this.currentInput;
+                } catch (error) {
+                    this.currentInput = 'Ошибка';
+                    this.updateDisplay();
+                    this.shouldResetDisplay = true;
+                    return 'Ошибка';
+                }
+            }
+
+            /**
+             * Очищает дисплей калькулятора
+             */
+            clearDisplay() {
+                this.currentInput = '0';
+                this.shouldResetDisplay = false;
+                this.updateDisplay();
+            }
+
+            /**
+             * Удаляет последний символ из текущего ввода
+             */
+            deleteLast() {
+                if (this.shouldResetDisplay) {
+                    this.clearDisplay();
                     return;
                 }
                 
-                const result = Function('"use strict"; return (' + expression + ')')();
-                
-                if (isNaN(result) || !isFinite(result)) {
-                    currentInput = 'Ошибка';
+                if (this.currentInput.length > 1) {
+                    this.currentInput = this.currentInput.slice(0, -1);
                 } else {
-                    currentInput = result.toString();
+                    this.currentInput = '0';
                 }
-                
-                updateDisplay();
-                shouldResetDisplay = true;
-            } catch (error) {
-                currentInput = 'Ошибка';
-                updateDisplay();
-                shouldResetDisplay = true;
+                this.updateDisplay();
             }
         }
 
-        function clearDisplay() {
-            currentInput = '0';
-            shouldResetDisplay = false;
-            updateDisplay();
-        }
+        // Инициализация калькулятора
+        const display = document.getElementById('display');
+        const calculator = new Calculator(display);
 
-        function deleteLast() {
-            if (shouldResetDisplay) {
-                clearDisplay();
-                return;
-            }
-            
-            if (currentInput.length > 1) {
-                currentInput = currentInput.slice(0, -1);
-            } else {
-                currentInput = '0';
-            }
-            updateDisplay();
-        }
+        // Глобальные функции для вызова из HTML
+        window.appendNumber = function(number) {
+            calculator.appendNumber(number);
+        };
+
+        window.appendDecimal = function() {
+            calculator.appendDecimal();
+        };
+
+        window.appendOperator = function(operator) {
+            calculator.appendOperator(operator);
+        };
+
+        window.calculate = function() {
+            calculator.calculate();
+        };
+
+        window.clearDisplay = function() {
+            calculator.clearDisplay();
+        };
+
+        window.deleteLast = function() {
+            calculator.deleteLast();
+        };
 
         // Поддержка клавиатуры
         document.addEventListener('keydown', function(event) {
             const key = event.key;
             
             if (key >= '0' && key <= '9') {
-                appendNumber(key);
+                calculator.appendNumber(key);
             } else if (key === '.') {
-                appendDecimal();
+                calculator.appendDecimal();
             } else if (key === '+') {
-                appendOperator('+');
+                calculator.appendOperator('+');
             } else if (key === '-') {
-                appendOperator('-');
+                calculator.appendOperator('-');
             } else if (key === '*') {
-                appendOperator('*');
+                calculator.appendOperator('*');
             } else if (key === '/') {
                 event.preventDefault();
-                appendOperator('/');
+                calculator.appendOperator('/');
             } else if (key === 'Enter' || key === '=') {
                 event.preventDefault();
-                calculate();
+                calculator.calculate();
             } else if (key === 'Escape' || key === 'c' || key === 'C') {
-                clearDisplay();
+                calculator.clearDisplay();
             } else if (key === 'Backspace') {
-                deleteLast();
+                calculator.deleteLast();
             }
         });
     </script>
